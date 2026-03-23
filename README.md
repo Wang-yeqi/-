@@ -17,3 +17,6 @@
 ```bash
 git clone https://github.com/Wang-yeqi/word-embedding-lab.git
 cd word-embedding-lab
+### 2. 配置环境
+```bash
+pip install -r requirements.txt
