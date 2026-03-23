@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>嵌入世界：词嵌入可视化实验室 | 深度学习Embedding概念交互教程</title>
+    <!-- 引入 D3.js 用于可视化 -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- 引入 Font Awesome 图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Poppins', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #f5f7fc 0%, #eef2f7 100%);
+            margin: 0;
+            padding: 20px;
+            color: #1a2a3a;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.4rem;
+            background: linear-gradient(120deg, #1e3c72, #2b4c7c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #4a627a;
+            font-size: 1.1rem;
+            margin-top: 8px;
+        }
+
+        .badge {
+            background: #2c3e66;
+            color: white;
+            border-radius: 40px;
+            padding: 4px 14px;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        /* 主布局：两列 */
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        /* 左侧可视化区 */
+        .vis-panel {
+            flex: 2;
+            min-width: 300px;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.15);
+            padding: 20px;
+            transition: all 0.2s;
+        }
+
+        /* 右侧控制区 */
+        .control-panel {
+            flex: 1.2;
+            min-width: 260px;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        .card {
+            background: #f8fafd;
+            border-radius: 24px;
+            padding: 16px 20px;
+            border: 1px solid #e2edf2;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1f3a5f;
+            border-left: 4px solid #3b82f6;
+            padding-left: 12px;
+        }
+
+        .dim-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .dim-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .dim-item label {
+            font-weight: 600;
+            color: #2c3e50;
+            width: 60px;
+        }
+
+        select {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+
+        button {
+            background: #2c3e66;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.85rem;
+        }
+
+        button:hover {
+            background: #1e2f4b;
+            transform: translateY(-1px);
+        }
+
+        .similar-list, .analogy-result {
+            background: #ffffffd9;
+            border-radius: 20px;
+            padding: 10px;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+
+        .similar-item {
+            display: inline-block;
+            background: #e6f0fa;
+            border-radius: 30px;
+            padding: 5px 12px;
+            margin: 4px 6px 4px 0;
+            cursor: pointer;
+            transition: 0.1s;
+            font-size: 0.85rem;
+        }
+
+        .similar-item:hover {
+            background: #3b82f6;
+            color: white;
+            transform: scale(1.02);
+        }
+
+        .word-highlight {
+            font-weight: bold;
+            color: #2563eb;
+        }
+
+        .analogy-box {
+            background: #f1f5f9;
+            border-radius: 20px;
+            padding: 12px;
+            margin-top: 12px;
+            font-family: monospace;
+            text-align: center;
+        }
+
+        .vector-demo {
+            font-size: 0.75rem;
+            color: #475569;
+            word-break: break-all;
+        }
+
+        .selected-info {
+            background: #eef2ff;
+            border-radius: 20px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        hr {
+            margin: 12px 0;
+            border-color: #dee4ec;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.8rem;
+            color: #5e6f8d;
+        }
+
+        .tooltip-d3 {
+            position: absolute;
+            background: #1e293b;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+        }
+        @media (max-width: 800px) {
+            .dashboard { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-cubes"></i> 嵌入世界 · Embedding Explorer</h1>
+        <p>深度理解高维语义映射 | 可交互特征向量 · 相似度 · 类比运算</p>
+        <div class="badge"><i class="fas fa-chalkboard-user"></i> 教学项目：每个单词用6维可解释特征表示 → 直观学习embedding本质</div>
+    </div>
+
+    <div class="dashboard">
+        <!-- 左侧散点图区域 -->
+        <div class="vis-panel">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; margin-bottom: 15px;">
+                <h3 style="margin:0"><i class="fas fa-chart-scatter"></i> 嵌入空间投影</h3>
+                <div style="font-size: 0.75rem; background: #eef2fa; padding: 4px 12px; border-radius: 30px;">
+                    <i class="fas fa-mouse-pointer"></i> 点击任意点 → 查看相似词 & 向量
+                </div>
+            </div>
+            <div id="scatter-container" style="position: relative; width: 100%; min-height: 500px;">
+                <svg id="scatter-svg" width="100%" height="500" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet" style="background: #ffffff; border-radius: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);"></svg>
+            </div>
+            <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <div style="background:#f1f5f9; border-radius: 40px; padding: 6px 12px; font-size:0.8rem">
+                    <i class="fas fa-chart-line"></i> 每个点 = 一个词 | 坐标轴 = 可解释特征维度
+                </div>
+                <div style="background:#f1f5f9; border-radius: 40px; padding: 6px 12px; font-size:0.8rem">
+                    <i class="fas fa-ruler-combined"></i> 距离 ≈ 语义差异
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧控制面板 -->
+        <div class="control-panel">
+            <!-- 坐标轴选择 -->
+            <div class="card">
+                <h3><i class="fas fa-axes"></i> 可视化维度</h3>
+                <div class="dim-selector">
+                    <div class="dim-item">
+                        <label>X轴</label>
+                        <select id="x-dim-select"></select>
+                    </div>
+                    <div class="dim-item">
+                        <label>Y轴</label>
+                        <select id="y-dim-select"></select>
+                    </div>
+                </div>
+                <button id="refresh-plot-btn"><i class="fas fa-sync-alt"></i> 更新投影</button>
+                <p style="font-size: 0.7rem; margin-top: 10px; color:#4b5563;"><i class="fas fa-lightbulb"></i> 每个维度都有具体语义 (动物性/性别/大小等)，观察同类词如何聚集</p>
+            </div>
+
+            <!-- 当前选中词详情 + 相似词 -->
+            <div class="card">
+                <h3><i class="fas fa-info-circle"></i> 当前焦点</h3>
+                <div id="selected-word-display" class="selected-info">
+                    <strong>⚡ 未选中</strong><br>
+                    <span style="font-size:0.8rem">点击左侧散点图中的任意单词</span>
+                </div>
+                <div style="margin-top: 15px;">
+                    <strong><i class="fas fa-hand-peace"></i> 最相似单词 Top-5</strong>
+                    <div id="similar-words-list" class="similar-list">——</div>
+                </div>
+            </div>
+
+            <!-- 向量类比实验室 -->
+            <div class="card">
+                <h3><i class="fas fa-plus-minus"></i> 向量类比实验室</h3>
+                <p style="font-size:0.8rem; margin:0 0 8px 0;">演示经典语义运算: A : B = C : ?</p>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between;">
+                    <select id="analogy-a" style="width:30%;"></select>
+                    <span style="align-self:center;">→</span>
+                    <select id="analogy-b" style="width:30%;"></select>
+                    <span style="align-self:center;">+</span>
+                    <select id="analogy-c" style="width:30%;"></select>
+                </div>
+                <button id="run-analogy" style="margin-top: 12px; width:100%;"><i class="fas fa-flask"></i> 计算类比 (A - B + C)</button>
+                <div id="analogy-result" class="analogy-box">
+                    等待运算...
+                </div>
+                <div class="vector-demo" style="margin-top:8px;">
+                    💡 例: 国王 - 男人 + 女人 ≈ 女王 &nbsp;&nbsp; 老虎 - 猫 + 狮子 ≈ 雄狮?
+                </div>
+            </div>
+
+            <!-- 附加说明与例子库 -->
+            <div class="card">
+                <h3><i class="fas fa-database"></i> 嵌入特征库</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size:0.75rem;">
+                    <span class="similar-item" style="background:#d9eff7;">🐾 动物性</span>
+                    <span class="similar-item" style="background:#d9eff7;">🌿 植物性</span>
+                    <span class="similar-item" style="background:#d9eff7;">⚥ 性别</span>
+                    <span class="similar-item" style="background:#d9eff7;">📏 体型</span>
+                    <span class="similar-item" style="background:#d9eff7;">⚠️ 危险度</span>
+                    <span class="similar-item" style="background:#d9eff7;">⚡ 速度/敏捷</span>
+                    <span class="similar-item" style="background:#d9eff7;">❤️ 情感分</span>
+                </div>
+                <p style="margin-bottom:0; font-size:0.7rem; margin-top:12px;"><i class="fas fa-graduation-cap"></i> 共<strong id="word-count">0</strong>个单词，每个单词都是7维特征向量。维度语义可解释，直观验证“相似单词空间距离近”。</p>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <i class="fas fa-brain"></i> 教学理念：通过可解释特征维度理解Embedding → 相似度、聚类与向量运算类比 | 点击单词探索语义关系
+    </footer>
+</div>
+
+<script>
+    // ----------------------------- 1. 构建可解释的词嵌入数据集 (7维语义特征) -----------------------------
+    // 维度顺序: [Animal, Plant, Gender, Size, Danger, Speed, Emotion]
+    // 范围大致 0~1 或 -0.5~1，Gender: 0=中性/无, 正=男性倾向, 负=女性倾向；或者更直观: 男性1女性-1
+    // 这里让 Gender: 男性 >0.5 , 女性 < -0.5 , 中性接近0
+    const wordsData = {
+        "狮子": { vector: [1.0, 0.0, 0.2, 0.9, 0.95, 0.85, 0.4], desc: "草原之王" },
+        "老虎": { vector: [1.0, 0.0, 0.2, 0.88, 0.96, 0.9, 0.35], desc: "猛兽" },
+        "猎豹": { vector: [1.0, 0.0, 0.1, 0.7, 0.7, 1.0, 0.3], desc: "速度之王" },
+        "大象": { vector: [1.0, 0.0, 0.1, 1.0, 0.6, 0.3, 0.5], desc: "巨大温和" },
+        "长颈鹿": { vector: [1.0, 0.0, 0.0, 0.95, 0.2, 0.5, 0.6], desc: "温顺高挑" },
+        "猫": { vector: [1.0, 0.0, 0.1, 0.3, 0.2, 0.7, 0.7], desc: "家猫" },
+        "狗": { vector: [1.0, 0.0, 0.1, 0.4, 0.3, 0.65, 0.85], desc: "忠诚伙伴" },
+        "狼": { vector: [1.0, 0.0, 0.1, 0.6, 0.8, 0.8, 0.2], desc: "野性" },
+        "马": { vector: [1.0, 0.0, 0.1, 0.75, 0.2, 0.9, 0.5], desc: "骏马" },
+        "苹果": { vector: [0.0, 1.0, 0.0, 0.25, 0.0, 0.0, 0.8], desc: "水果" },
+        "香蕉": { vector: [0.0, 1.0, 0.0, 0.2, 0.0, 0.0, 0.85], desc: "水果" },
+        "橙子": { vector: [0.0, 1.0, 0.0, 0.2, 0.0, 0.0, 0.82], desc: "柑橘" },
+        "草莓": { vector: [0.0, 1.0, 0.0, 0.15, 0.0, 0.0, 0.9], desc: "浆果" },
+        "胡萝卜": { vector: [0.0, 1.0, 0.0, 0.2, 0.0, 0.0, 0.6], desc: "蔬菜" },
+        "西兰花": { vector: [0.0, 1.0, 0.0, 0.25, 0.0, 0.0, 0.5], desc: "蔬菜" },
+        "国王": { vector: [0.0, 0.0, 0.95, 0.7, 0.5, 0.2, 0.6], desc: "男性统治者" },
+        "女王": { vector: [0.0, 0.0, -0.95, 0.7, 0.5, 0.2, 0.7], desc: "女性统治者" },
+        "王子": { vector: [0.0, 0.0, 0.9, 0.5, 0.3, 0.4, 0.65], desc: "年轻男性" },
+        "公主": { vector: [0.0, 0.0, -0.9, 0.45, 0.2, 0.4, 0.8], desc: "年轻女性" },
+        "男人": { vector: [0.0, 0.0, 0.85, 0.6, 0.2, 0.4, 0.5], desc: "成年男性" },
+        "女人": { vector: [0.0, 0.0, -0.85, 0.55, 0.15, 0.4, 0.7], desc: "成年女性" },
+        "汽车": { vector: [0.0, 0.0, 0.0, 0.6, 0.4, 0.85, 0.3], desc: "交通工具" },
+        "火车": { vector: [0.0, 0.0, 0.0, 0.85, 0.3, 0.6, 0.2], desc: "轨道运输" },
+        "飞机": { vector: [0.0, 0.0, 0.0, 0.9, 0.2, 1.0, 0.4], desc: "航空" },
+        "船": { vector: [0.0, 0.0, 0.0, 0.7, 0.1, 0.4, 0.3], desc: "航海" },
+        "玫瑰": { vector: [0.0, 0.9, 0.0, 0.1, 0.0, 0.0, 0.95], desc: "花卉" },
+        "向日葵": { vector: [0.0, 0.9, 0.0, 0.4, 0.0, 0.0, 0.88], desc: "花卉" },
+        "河流": { vector: [0.0, 0.0, 0.0, 0.5, 0.0, 0.3, 0.4], desc: "自然" },
+        "山脉": { vector: [0.0, 0.0, 0.0, 0.95, 0.2, 0.0, 0.5], desc: "地理" },
+        "云": { vector: [0.0, 0.0, 0.0, 0.3, 0.0, 0.6, 0.4], desc: "天空" },
+        "火焰": { vector: [0.0, 0.0, 0.0, 0.3, 0.9, 0.7, 0.2], desc: "热" },
+        "冰": { vector: [0.0, 0.0, 0.0, 0.3, 0.2, 0.1, -0.2], desc: "冷" },
+        "快乐": { vector: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0], desc: "情绪" },
+        "悲伤": { vector: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.9], desc: "情绪" },
+        "愤怒": { vector: [0.0, 0.0, 0.0, 0.0, 0.7, 0.0, -0.7], desc: "情绪" },
+        "雄狮": { vector: [1.0, 0.0, 0.95, 0.92, 0.96, 0.84, 0.45], desc: "类比用" },
+        "母狮": { vector: [1.0, 0.0, -0.95, 0.85, 0.94, 0.8, 0.5], desc: "类比用" },
+        "程序员": { vector: [0.0, 0.0, 0.6, 0.2, 0.0, 0.2, 0.4], desc: "职业" },
+        "设计师": { vector: [0.0, 0.0, 0.55, 0.2, 0.0, 0.2, 0.7], desc: "职业" },
+    };
+
+    // 补充几个更多例子保证丰富度
+    wordsData["熊猫"] = { vector: [1.0, 0.0, 0.0, 0.6, 0.2, 0.3, 0.9], desc: "国宝" };
+    wordsData["企鹅"] = { vector: [1.0, 0.0, 0.0, 0.4, 0.1, 0.5, 0.7], desc: "鸟类" };
+    wordsData["葡萄"] = { vector: [0.0, 1.0, 0.0, 0.15, 0.0, 0.0, 0.86], desc: "水果" };
+    wordsData["摩托车"] = { vector: [0.0, 0.0, 0.0, 0.5, 0.3, 0.9, 0.5], desc: "交通工具" };
+
+    const wordList = Object.keys(wordsData);
+    const dimensionNames = ["动物🐾", "植物🌿", "性别⚥", "体型📏", "危险⚠️", "速度⚡", "情感❤️"];
+    // 提取所有向量为数组便于计算
+    const vectors = {};
+    for (let w of wordList) {
+        vectors[w] = wordsData[w].vector.slice(); // 深拷贝
+    }
+
+    // 更新显示单词总数
+    document.getElementById("word-count").innerText = wordList.length;
+
+    // 填充维度下拉菜单
+    const xDimSelect = document.getElementById("x-dim-select");
+    const yDimSelect = document.getElementById("y-dim-select");
+    for (let i = 0; i < dimensionNames.length; i++) {
+        let optX = document.createElement("option");
+        optX.value = i;
+        optX.text = `${dimensionNames[i]} (dim${i+1})`;
+        let optY = document.createElement("option");
+        optY.value = i;
+        optY.text = `${dimensionNames[i]} (dim${i+1})`;
+        xDimSelect.appendChild(optX);
+        yDimSelect.appendChild(optY);
+    }
+    xDimSelect.value = "0";   // 默认动物性
+    yDimSelect.value = "3";   // 体型
+
+    // 填充类比下拉菜单
+    const analogyA = document.getElementById("analogy-a");
+    const analogyB = document.getElementById("analogy-b");
+    const analogyC = document.getElementById("analogy-c");
+    wordList.forEach(w => {
+        let opt1 = document.createElement("option");
+        opt1.value = w;
+        opt1.text = w;
+        let opt2 = document.createElement("option");
+        opt2.value = w;
+        opt2.text = w;
+        let opt3 = document.createElement("option");
+        opt3.value = w;
+        opt3.text = w;
+        analogyA.appendChild(opt1);
+        analogyB.appendChild(opt2);
+        analogyC.appendChild(opt3);
+    });
+    // 预设经典类比
+    analogyA.value = "国王";
+    analogyB.value = "男人";
+    analogyC.value = "女人";
+
+    // ---------- 余弦相似度 ----------
+    function cosineSimilarity(vecA, vecB) {
+        if (vecA.length !== vecB.length) return 0;
+        let dot = 0, magA = 0, magB = 0;
+        for (let i = 0; i < vecA.length; i++) {
+            dot += vecA[i] * vecB[i];
+            magA += vecA[i] * vecA[i];
+            magB += vecB[i] * vecB[i];
+        }
+        if (magA === 0 || magB === 0) return 0;
+        return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+    }
+
+    // 获取最近邻 (排除自身)
+    function getNearestWords(targetWord, topK = 5) {
+        const targetVec = vectors[targetWord];
+        let similarities = [];
+        for (let w of wordList) {
+            if (w === targetWord) continue;
+            let sim = cosineSimilarity(targetVec, vectors[w]);
+            similarities.push({word: w, sim: sim});
+        }
+        similarities.sort((a,b) => b.sim - a.sim);
+        return similarities.slice(0, topK);
+    }
+
+    // 向量加法减法并找最近邻 (类比)
+    function analogyAnalogy(wordA, wordB, wordC) {
+        const vecA = vectors[wordA];
+        const vecB = vectors[wordB];
+        const vecC = vectors[wordC];
+        const resultVec = vecA.map((v, idx) => v - vecB[idx] + vecC[idx]);
+        let bestWord = null;
+        let bestSim = -Infinity;
+        for (let w of wordList) {
+            if (w === wordA || w === wordB || w === wordC) continue;
+            let sim = cosineSimilarity(resultVec, vectors[w]);
+            if (sim > bestSim) {
+                bestSim = sim;
+                bestWord = w;
+            }
+        }
+        if (bestWord) return { word: bestWord, similarity: bestSim.toFixed(3) };
+        return { word: "无", similarity: 0 };
+    }
+
+    // ---------- D3 绘图 ----------
+    let currentSvg = null;
+    function renderScatter(xDimIdx, yDimIdx, selectedWord = null) {
+        const svg = d3.select("#scatter-svg");
+        svg.selectAll("*").remove();
+        const width = 800, height = 500;
+        svg.attr("viewBox", `0 0 ${width} ${height}`);
+
+        // 提取坐标
+        let points = [];
+        for (let w of wordList) {
+            let vec = vectors[w];
+            let xVal = vec[xDimIdx];
+            let yVal = vec[yDimIdx];
+            points.push({ word: w, x: xVal, y: yVal, desc: wordsData[w].desc });
+        }
+
+        const xScale = d3.scaleLinear().domain([-0.2, 1.1]).range([50, width-50]).nice();
+        const yScale = d3.scaleLinear().domain([-1.0, 1.1]).range([height-50, 50]).nice();
+
+        // 轴
+        svg.append("g").call(d3.axisLeft(yScale)).attr("transform", `translate(50,0)`);
+        svg.append("g").call(d3.axisBottom(xScale)).attr("transform", `translate(0,${height-50})`);
+        // 轴标签
+        svg.append("text").attr("x", width/2).attr("y", height-15).attr("text-anchor","middle").style("font-size","12px").text(dimensionNames[xDimIdx]);
+        svg.append("text").attr("x", 25).attr("y", height/2).attr("text-anchor","middle").attr("transform", `rotate(-90, 25, ${height/2})`).style("font-size","12px").text(dimensionNames[yDimIdx]);
+
+        // 绘制网格线
+        svg.append("g").attr("class", "grid").call(d3.axisLeft(yScale).tickSize(-width+100).tickFormat("")).style("color","#e2e8f0");
+        svg.append("g").attr("class", "grid").call(d3.axisBottom(xScale).tickSize(-height+100).tickFormat("")).style("color","#e2e8f0");
+
+        // 绘制点
+        const tooltip = d3.select("body").append("div").attr("class", "tooltip-d3").style("opacity", 0);
+        svg.selectAll("circle")
+            .data(points)
+            .enter()
+            .append("circle")
+            .attr("cx", d => xScale(d.x))
+            .attr("cy", d => yScale(d.y))
+            .attr("r", 8)
+            .attr("fill", d => d.word === selectedWord ? "#f97316" : "#3b82f6")
+            .attr("stroke", "white")
+            .attr("stroke-width", 2)
+            .attr("opacity", 0.85)
+            .on("mouseover", function(event, d) {
+                tooltip.style("opacity", 1).html(`<b>${d.word}</b><br>${dimensionNames[xDimIdx]}:${d.x.toFixed(2)}<br>${dimensionNames[yDimIdx]}:${d.y.toFixed(2)}`).style("left", (event.pageX+12)+"px").style("top", (event.pageY-28)+"px");
+                d3.select(this).attr("r", 12).attr("stroke", "#ffb347");
+            })
+            .on("mouseout", function() { tooltip.style("opacity", 0); d3.select(this).attr("r", 8).attr("stroke", "white"); })
+            .on("click", (event, d) => {
+                updateSelectedPanel(d.word);
+                renderScatter(xDimIdx, yDimIdx, d.word);
+            });
+
+        // 添加文字标签(避免遮挡，智能偏移)
+        svg.selectAll("text.label")
+            .data(points)
+            .enter()
+            .append("text")
+            .attr("x", d => xScale(d.x) + 6)
+            .attr("y", d => yScale(d.y) - 5)
+            .text(d => d.word)
+            .attr("font-size", "9px")
+            .attr("fill", "#1f2a44")
+            .style("font-weight", "500")
+            .style("pointer-events", "none");
+    }
+
+    // 更新右侧面板: 显示选中单词信息 + 相似词
+    function updateSelectedPanel(word) {
+        if (!word) return;
+        const vec = vectors[word];
+        const vecStr = vec.map((v,idx) => `${dimensionNames[idx]}: ${v.toFixed(2)}`).join(" · ");
+        document.getElementById("selected-word-display").innerHTML = `<strong>✨ ${word}</strong><br><span style="font-size:0.7rem">${wordsData[word].desc || ""}</span><div class="vector-demo" style="margin-top:6px;">${vecStr}</div>`;
+        const neighbors = getNearestWords(word, 6);
+        const simContainer = document.getElementById("similar-words-list");
+        simContainer.innerHTML = "";
+        neighbors.forEach(n => {
+            let chip = document.createElement("span");
+            chip.className = "similar-item";
+            chip.innerText = `${n.word} (${(n.sim*100).toFixed(0)}%)`;
+            chip.addEventListener("click", () => {
+                updateSelectedPanel(n.word);
+                const xv = parseInt(xDimSelect.value);
+                const yv = parseInt(yDimSelect.value);
+                renderScatter(xv, yv, n.word);
+            });
+            simContainer.appendChild(chip);
+        });
+    }
+
+    // 类比运算UI
+    function runAnalogy() {
+        const a = analogyA.value;
+        const b = analogyB.value;
+        const c = analogyC.value;
+        if (!a || !b || !c) return;
+        const result = analogyAnalogy(a, b, c);
+        document.getElementById("analogy-result").innerHTML = `<strong>${a} - ${b} + ${c}</strong>  ≈  <span class="word-highlight">${result.word}</span><br><span style="font-size:0.7rem">相似度: ${result.similarity}</span>`;
+    }
+
+    // 刷新散点图
+    function refreshPlot() {
+        const xIdx = parseInt(xDimSelect.value);
+        const yIdx = parseInt(yDimSelect.value);
+        const currentSelected = document.getElementById("selected-word-display").innerText.includes("✨") ?
+            (()=>{ let txt = document.getElementById("selected-word-display").innerText; let match = txt.match(/✨ (.*?)(\n|<br>)/); return match ? match[1] : null; })() : null;
+        renderScatter(xIdx, yIdx, currentSelected);
+    }
+
+    // 初始化页面
+    function init() {
+        renderScatter(0, 3, null);
+        // 默认选中第一个词展示例子
+        updateSelectedPanel("狮子");
+        renderScatter(0, 3, "狮子");
+        document.getElementById("refresh-plot-btn").addEventListener("click", () => refreshPlot());
+        document.getElementById("run-analogy").addEventListener("click", () => runAnalogy());
+        // 初始运行一次类比默认展示
+        runAnalogy();
+    }
+
+    init();
+</script>
+</body>
+</html>
