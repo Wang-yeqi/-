@@ -23,9 +23,10 @@ cd word-embedding-lab
 pip install -r requirements.txt
 ```
 ## 项目结构
-.
--├── app.py                # 主程序
--├── requirements.txt      # 依赖列表
--└── README.md             # 项目说明
+```bash
+├── app.py                # 主程序
+├── requirements.txt      # 依赖列表
+└── README.md             # 项目说明
+```
 ## 自定义词向量
 当前词向量为示例数据（共 40 个单词，7 个维度）。如需替换，请修改 main.py 中的 words_embedding 字典和 dim_names 列表。
